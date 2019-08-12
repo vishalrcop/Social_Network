@@ -1,5 +1,7 @@
 const _ = require('lodash');
 const User = require('../models/user');
+const formidable = require('formidable');
+const fs = require('fs');
 
 exports.userById = (req, res, next, id) =>{
 	User.findById(id).exec((err, user) =>{
@@ -29,7 +31,7 @@ exports.allUsers = (req,res) => {
 		{
 			return res.status(400).json({error: err});
 		}
-		res.json({users});
+		res.json(users);
 	}).select("name email created updated");
 };
 
@@ -39,20 +41,54 @@ exports.getUser = (req,res) => {
 	return res.json(req.profile);
 };
 
-exports.updateUser = (req,res) => {
-	let user = req.profile;
-	user = _.extend(user, req.body); //extend - mutate the source object
-	user.update = Date.now();
-	user.save((err) => {
-		if(err)
-		{
+// exports.updateUser = (req,res) => {
+// 	let user = req.profile;
+// 	user = _.extend(user, req.body); //extend - mutate the source object
+// 	user.update = Date.now();
+// 	user.save((err) => {
+// 		if(err)
+// 		{
+// 			return res.status(400).json({
+// 				error: "you are no authorized to perform this operation.."
+// 			});
+// 		}
+// 		user.hashed_password = undefined;
+// 		user.salt = undefined;
+// 		res.json({user});
+// 	});
+// };
+
+exports.updateUser = (req,res,next) => {
+
+	let form = new formidable.IncomingForm();
+	form.keepExtensions = true;
+
+	form.parse(req, (err,fields,files) => {
+		if(err){
 			return res.status(400).json({
-				error: "you are no authorized to perform this operation.."
-			});
+				error:"Photo could not be uploaded"
+			})
 		}
-		user.hashed_password = undefined;
-		user.salt = undefined;
-		res.json({user});
+		//save user
+		let user=req.profile;
+		user= _.extend(user, fields);
+		user.updated = Date.now();
+
+		if(files.photo){
+			user.photo.data = fs.readFileSync(files.photo.path);
+			user.photo.contentType = files.photo.type;
+		}
+
+		user.save((err,result) => {
+			if(err){
+				return res.status(400).json({
+					error:err
+				});
+			}
+			user.hashed_password = undefined;
+			user.salt = undefined;
+			res.json(user);
+		});
 	});
 };
 

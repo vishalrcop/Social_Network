@@ -22,7 +22,11 @@ const userSchema = new mongoose.Schema({
 		type: Date,
 		default: Date.now
 	},				
-	update: Date
+	update: Date,
+	photo: {
+		data: Buffer,
+		contentType: String
+	}
 });
 
 userSchema.virtual('password')
